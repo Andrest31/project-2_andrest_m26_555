@@ -16,6 +16,7 @@ from src.primitive_db.core import (
 )
 from src.primitive_db.parser import parse_condition, parse_values
 from src.primitive_db.utils import (
+    delete_table_data,
     load_metadata,
     load_table_data,
     save_metadata,
@@ -286,6 +287,7 @@ def run():
 
                 if result is not None and result != old_metadata:
                     save_metadata(META_FILE, result)
+                    delete_table_data(args[1])
 
             elif command == "insert":
                 handle_insert(metadata, args)

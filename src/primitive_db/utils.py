@@ -40,3 +40,10 @@ def save_table_data(table_name, data):
 
     with open(filepath, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
+
+def delete_table_data(table_name):
+    """Delete a table data file if it exists."""
+    filepath = os.path.join(DATA_DIR, f"{table_name}.json")
+
+    if os.path.exists(filepath):
+        os.remove(filepath)

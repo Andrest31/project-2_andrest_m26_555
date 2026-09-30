@@ -108,3 +108,39 @@ def select(table_data, where_clause=None):
             for column, value in where_clause.items()
         )
     ]
+
+def update(table_data, set_clause, where_clause):
+    """Update records matching the condition."""
+    updated_ids = []
+
+    for record in table_data:
+        matches = all(
+            record.get(column) == value
+            for column, value in where_clause.items()
+        )
+
+        if matches:
+            record.update(set_clause)
+            updated_ids.append(record["ID"])
+
+    return table_data, updated_ids
+
+
+def delete(table_data, where_clause):
+    """Delete records matching the condition."""
+    deleted_ids = [
+        record["ID"]
+        for record in table_data
+        if all(
+            record.get(column) == value
+            for column, value in where_clause.items()
+        )
+    ]
+
+    remaining_data = [
+        record
+        for record in table_data
+        if record["ID"] not in deleted_ids
+    ]
+
+    return remaining_data, deleted_ids

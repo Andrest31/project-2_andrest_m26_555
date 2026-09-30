@@ -8,9 +8,11 @@ from prettytable import PrettyTable
 from src.primitive_db.constants import META_FILE
 from src.primitive_db.core import (
     create_table,
+    delete,
     drop_table,
     insert,
     select,
+    update,
 )
 from src.primitive_db.parser import parse_condition, parse_values
 from src.primitive_db.utils import (
@@ -39,6 +41,15 @@ def print_help():
         "<command> select from <имя_таблицы> "
         "where <столбец> = <значение> - прочитать записи"
     )
+    print(
+        "<command> update <имя_таблицы> set <столбец> = "
+        "<значение> where <столбец> = <значение> - обновить запись"
+    )
+    print(
+        "<command> delete from <имя_таблицы> where "
+        "<столбец> = <значение> - удалить запись"
+    )
+    print("<command> info <имя_таблицы> - информация о таблице")
     print("<command> select from <имя_таблицы> - прочитать все записи")
     print("<command> exit - выход из программы")
     print("<command> help - справочная информация\n")
@@ -110,6 +121,96 @@ def handle_select(metadata, args):
     result = select(table_data, where_clause)
     print_table(metadata, table_name, result)
 
+def handle_update(metadata, args):
+    """Handle an update command."""
+    if len(args) < 8 or args[2] != "set":
+        raise ValueError("Некорректная команда update")
+
+    table_name = args[1]
+
+    if table_name not in metadata:
+        raise KeyError(table_name)
+
+    if "where" not in args:
+        raise ValueError("В команде update отсутствует where")
+
+    where_index = args.index("where")
+
+    set_text = " ".join(args[3:where_index])
+    where_text = " ".join(args[where_index + 1:])
+
+    set_clause = parse_condition(set_text)
+    where_clause = parse_condition(where_text)
+
+    table_data = load_table_data(table_name)
+
+    updated_data, updated_ids = update(
+        table_data,
+        set_clause,
+        where_clause,
+    )
+
+    save_table_data(table_name, updated_data)
+
+    for record_id in updated_ids:
+        print(
+            f"Запись с ID={record_id} в таблице "
+            f'"{table_name}" успешно обновлена.'
+        )
+
+def handle_delete(metadata, args):
+    """Handle a delete command."""
+    if len(args) < 6 or args[1] != "from":
+        raise ValueError("Некорректная команда delete")
+
+    table_name = args[2]
+
+    if table_name not in metadata:
+        raise KeyError(table_name)
+
+    if args[3] != "where":
+        raise ValueError("В команде delete отсутствует where")
+
+    where_text = " ".join(args[4:])
+    where_clause = parse_condition(where_text)
+
+    table_data = load_table_data(table_name)
+
+    updated_data, deleted_ids = delete(
+        table_data,
+        where_clause,
+    )
+
+    save_table_data(table_name, updated_data)
+
+    for record_id in deleted_ids:
+        print(
+            f"Запись с ID={record_id} успешно удалена "
+            f'из таблицы "{table_name}".'
+        )
+
+def handle_info(metadata, args):
+    """Print information about a table."""
+    if len(args) != 2:
+        raise ValueError("Некорректная команда info")
+
+    table_name = args[1]
+
+    if table_name not in metadata:
+        raise KeyError(table_name)
+
+    columns = metadata[table_name]
+    table_data = load_table_data(table_name)
+
+    columns_text = ", ".join(
+        f"{name}:{data_type}"
+        for name, data_type in columns
+    )
+
+    print(f"Таблица: {table_name}")
+    print(f"Столбцы: {columns_text}")
+    print(f"Количество записей: {len(table_data)}")
+
 
 def run():
     """Run the main database command loop."""
@@ -171,6 +272,15 @@ def run():
 
             elif command == "select":
                 handle_select(metadata, args)
+
+            elif command == "update":
+                handle_update(metadata, args)
+
+            elif command == "delete":
+                handle_delete(metadata, args)
+
+            elif command == "info":
+                handle_info(metadata, args)
 
             else:
                 print(f"Функции {command} нет. Попробуйте снова.")

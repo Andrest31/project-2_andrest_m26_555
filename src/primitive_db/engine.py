@@ -89,6 +89,39 @@ def print_table(metadata, table_name, table_data):
     print(table)
 
 
+def validate_column(metadata, table_name, column_name):
+    """Check that a column exists in the table."""
+    columns = metadata[table_name]
+    column_names = [column[0] for column in columns]
+
+    if column_name not in column_names:
+        raise ValueError(
+            f'Столбец "{column_name}" не существует '
+            f'в таблице "{table_name}"'
+        )
+
+
+def validate_value_type(metadata, table_name, column_name, value):
+    """Check that a value matches the column type."""
+    columns = dict(metadata[table_name])
+    column_type = columns[column_name]
+
+    if column_type == "int" and type(value) is not int:
+        raise ValueError(
+            f"Поле {column_name} должно иметь тип int"
+        )
+
+    if column_type == "str" and type(value) is not str:
+        raise ValueError(
+            f"Поле {column_name} должно иметь тип str"
+        )
+
+    if column_type == "bool" and type(value) is not bool:
+        raise ValueError(
+            f"Поле {column_name} должно иметь тип bool"
+        )
+
+
 def handle_insert(metadata, args):
     """Handle an insert command."""
     if len(args) < 5 or args[1] != "into" or args[3] != "values":
@@ -124,6 +157,9 @@ def handle_select(metadata, args):
         condition_text = " ".join(args[4:])
         where_clause = parse_condition(condition_text)
 
+        for column_name in where_clause:
+            validate_column(metadata, table_name, column_name)
+
     result = select(table_data, where_clause)
 
     if result is not None:
@@ -150,6 +186,23 @@ def handle_update(metadata, args):
 
     set_clause = parse_condition(set_text)
     where_clause = parse_condition(where_text)
+
+    for column_name in set_clause:
+        validate_column(metadata, table_name, column_name)
+
+    for column_name in where_clause:
+        validate_column(metadata, table_name, column_name)
+
+    if "ID" in set_clause:
+        raise ValueError("Столбец ID нельзя изменять")
+
+    for column_name, value in set_clause.items():
+        validate_value_type(
+            metadata,
+            table_name,
+            column_name,
+            value,
+        )
 
     table_data = load_table_data(table_name)
 
@@ -188,6 +241,9 @@ def handle_delete(metadata, args):
 
     where_text = " ".join(args[4:])
     where_clause = parse_condition(where_text)
+
+    for column_name in where_clause:
+        validate_column(metadata, table_name, column_name)
 
     table_data = load_table_data(table_name)
 

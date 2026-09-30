@@ -1,6 +1,7 @@
 """Core database operations."""
 
 from src.primitive_db.constants import VALID_TYPES
+from src.primitive_db.utils import load_table_data
 
 
 def create_table(metadata, table_name, columns):
@@ -39,3 +40,71 @@ def drop_table(metadata, table_name):
     print(f'Таблица "{table_name}" успешно удалена.')
 
     return metadata
+
+def insert(metadata, table_name, values):
+    """Insert a new record into a table."""
+    if table_name not in metadata:
+        raise KeyError(table_name)
+
+    columns = metadata[table_name]
+    data_columns = columns[1:]
+
+    if len(values) != len(data_columns):
+        raise ValueError(
+            "Количество значений не соответствует количеству столбцов."
+        )
+
+    for value, column in zip(values, data_columns):
+        column_name, column_type = column
+
+        if column_type == "int" and type(value) is not int:
+            raise ValueError(
+                f"Поле {column_name} должно иметь тип int."
+            )
+
+        if column_type == "str" and type(value) is not str:
+            raise ValueError(
+                f"Поле {column_name} должно иметь тип str."
+            )
+
+        if column_type == "bool" and type(value) is not bool:
+            raise ValueError(
+                f"Поле {column_name} должно иметь тип bool."
+            )
+
+    table_data = load_table_data(table_name)
+
+    new_id = max(
+        (record["ID"] for record in table_data),
+        default=0,
+    ) + 1
+
+    record = {"ID": new_id}
+
+    for column, value in zip(data_columns, values):
+        column_name = column[0]
+        record[column_name] = value
+
+    table_data.append(record)
+
+    print(
+        f'Запись с ID={new_id} успешно добавлена '
+        f'в таблицу "{table_name}".'
+    )
+
+    return table_data
+
+
+def select(table_data, where_clause=None):
+    """Select records from table data."""
+    if where_clause is None:
+        return table_data
+
+    return [
+        record
+        for record in table_data
+        if all(
+            record.get(column) == value
+            for column, value in where_clause.items()
+        )
+    ]

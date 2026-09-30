@@ -1,6 +1,9 @@
 """Utility functions for working with files."""
 
 import json
+import os
+
+from src.primitive_db.constants import DATA_DIR
 
 
 def load_metadata(filepath):
@@ -14,5 +17,26 @@ def load_metadata(filepath):
 
 def save_metadata(filepath, data):
     """Save database metadata to a JSON file."""
+    with open(filepath, "w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
+
+
+def load_table_data(table_name):
+    """Load table data from a JSON file."""
+    filepath = os.path.join(DATA_DIR, f"{table_name}.json")
+
+    try:
+        with open(filepath, encoding="utf-8") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
+
+
+def save_table_data(table_name, data):
+    """Save table data to a JSON file."""
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    filepath = os.path.join(DATA_DIR, f"{table_name}.json")
+
     with open(filepath, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)

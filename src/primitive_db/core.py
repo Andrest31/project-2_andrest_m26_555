@@ -3,10 +3,13 @@
 from src.primitive_db.constants import VALID_TYPES
 from src.primitive_db.decorators import (
     confirm_action,
+    create_cacher,
     handle_db_errors,
     log_time,
 )
 from src.primitive_db.utils import load_table_data
+
+select_cache = create_cacher()
 
 
 @handle_db_errors
@@ -109,18 +112,23 @@ def insert(metadata, table_name, values):
 @handle_db_errors
 @log_time
 def select(table_data, where_clause=None):
-    """Select records from table data."""
-    if where_clause is None:
-        return table_data
+    """Select records from table data with caching."""
+    cache_key = repr((table_data, where_clause))
 
-    return [
-        record
-        for record in table_data
-        if all(
-            record.get(column) == value
-            for column, value in where_clause.items()
-        )
-    ]
+    def get_result():
+        if where_clause is None:
+            return table_data
+
+        return [
+            record
+            for record in table_data
+            if all(
+                record.get(column) == value
+                for column, value in where_clause.items()
+            )
+        ]
+
+    return select_cache(cache_key, get_result)
 
 
 @handle_db_errors

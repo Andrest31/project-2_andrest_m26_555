@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
+"""Entry point for the primitive database."""
+
+from src.primitive_db.engine import run
+
 
 def main():
-    """Run the database application."""
-    print("DB project is running!")
+    """Start the primitive database."""
+    run()
 
 
 if __name__ == "__main__":

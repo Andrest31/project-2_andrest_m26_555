@@ -42,6 +42,10 @@ def print_help():
         "where <столбец> = <значение> - прочитать записи"
     )
     print(
+        "<command> select from <имя_таблицы> "
+        "- прочитать все записи"
+    )
+    print(
         "<command> update <имя_таблицы> set <столбец> = "
         "<значение> where <столбец> = <значение> - обновить запись"
     )
@@ -50,7 +54,6 @@ def print_help():
         "<столбец> = <значение> - удалить запись"
     )
     print("<command> info <имя_таблицы> - информация о таблице")
-    print("<command> select from <имя_таблицы> - прочитать все записи")
     print("<command> exit - выход из программы")
     print("<command> help - справочная информация\n")
 
@@ -95,7 +98,9 @@ def handle_insert(metadata, args):
     values = parse_values(values_text)
 
     table_data = insert(metadata, table_name, values)
-    save_table_data(table_name, table_data)
+
+    if table_data is not None:
+        save_table_data(table_name, table_data)
 
 
 def handle_select(metadata, args):
@@ -119,7 +124,10 @@ def handle_select(metadata, args):
         where_clause = parse_condition(condition_text)
 
     result = select(table_data, where_clause)
-    print_table(metadata, table_name, result)
+
+    if result is not None:
+        print_table(metadata, table_name, result)
+
 
 def handle_update(metadata, args):
     """Handle an update command."""
@@ -144,11 +152,16 @@ def handle_update(metadata, args):
 
     table_data = load_table_data(table_name)
 
-    updated_data, updated_ids = update(
+    result = update(
         table_data,
         set_clause,
         where_clause,
     )
+
+    if result is None:
+        return
+
+    updated_data, updated_ids = result
 
     save_table_data(table_name, updated_data)
 
@@ -157,6 +170,7 @@ def handle_update(metadata, args):
             f"Запись с ID={record_id} в таблице "
             f'"{table_name}" успешно обновлена.'
         )
+
 
 def handle_delete(metadata, args):
     """Handle a delete command."""
@@ -176,10 +190,15 @@ def handle_delete(metadata, args):
 
     table_data = load_table_data(table_name)
 
-    updated_data, deleted_ids = delete(
+    result = delete(
         table_data,
         where_clause,
     )
+
+    if result is None:
+        return
+
+    updated_data, deleted_ids = result
 
     save_table_data(table_name, updated_data)
 
@@ -188,6 +207,7 @@ def handle_delete(metadata, args):
             f"Запись с ID={record_id} успешно удалена "
             f'из таблицы "{table_name}".'
         )
+
 
 def handle_info(metadata, args):
     """Print information about a table."""
@@ -248,24 +268,24 @@ def run():
                 columns = parse_columns(args[2:])
 
                 old_metadata = metadata.copy()
-                metadata = create_table(
+                result = create_table(
                     metadata,
                     table_name,
                     columns,
                 )
 
-                if metadata != old_metadata:
-                    save_metadata(META_FILE, metadata)
+                if result is not None and result != old_metadata:
+                    save_metadata(META_FILE, result)
 
             elif command == "drop_table":
                 if len(args) != 2:
                     raise ValueError("drop_table")
 
                 old_metadata = metadata.copy()
-                metadata = drop_table(metadata, args[1])
+                result = drop_table(metadata, args[1])
 
-                if metadata != old_metadata:
-                    save_metadata(META_FILE, metadata)
+                if result is not None and result != old_metadata:
+                    save_metadata(META_FILE, result)
 
             elif command == "insert":
                 handle_insert(metadata, args)
@@ -288,4 +308,7 @@ def run():
         except KeyError as error:
             print(f"Ошибка: Таблица {error} не существует.")
         except ValueError as error:
-            print(f"Некорректное значение: {error}. Попробуйте снова.")
+            print(
+                f"Некорректное значение: {error}. "
+                "Попробуйте снова."
+            )

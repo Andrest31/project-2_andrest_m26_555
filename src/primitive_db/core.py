@@ -1,9 +1,15 @@
 """Core database operations."""
 
 from src.primitive_db.constants import VALID_TYPES
+from src.primitive_db.decorators import (
+    confirm_action,
+    handle_db_errors,
+    log_time,
+)
 from src.primitive_db.utils import load_table_data
 
 
+@handle_db_errors
 def create_table(metadata, table_name, columns):
     """Create a new table in database metadata."""
     if table_name in metadata:
@@ -30,6 +36,8 @@ def create_table(metadata, table_name, columns):
     return metadata
 
 
+@handle_db_errors
+@confirm_action("удаление таблицы")
 def drop_table(metadata, table_name):
     """Delete a table from database metadata."""
     if table_name not in metadata:
@@ -41,6 +49,9 @@ def drop_table(metadata, table_name):
 
     return metadata
 
+
+@handle_db_errors
+@log_time
 def insert(metadata, table_name, values):
     """Insert a new record into a table."""
     if table_name not in metadata:
@@ -95,6 +106,8 @@ def insert(metadata, table_name, values):
     return table_data
 
 
+@handle_db_errors
+@log_time
 def select(table_data, where_clause=None):
     """Select records from table data."""
     if where_clause is None:
@@ -109,6 +122,8 @@ def select(table_data, where_clause=None):
         )
     ]
 
+
+@handle_db_errors
 def update(table_data, set_clause, where_clause):
     """Update records matching the condition."""
     updated_ids = []
@@ -126,6 +141,8 @@ def update(table_data, set_clause, where_clause):
     return table_data, updated_ids
 
 
+@handle_db_errors
+@confirm_action("удаление записи")
 def delete(table_data, where_clause):
     """Delete records matching the condition."""
     deleted_ids = [
